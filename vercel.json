@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "app.py": {
+      "includeFiles": "{templates/**,static/**,namumark.py,db_compat.py}",
+      "excludeFiles": "{tests_test_namumark.py,tests_test_db_compat.py,render.yaml,run_windows.bat,**/*.md}"
+    }
+  }
+}

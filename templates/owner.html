@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+{% block title %}소유자 설정 - {{ site_name }}{% endblock %}
+{% block content %}
+<div class="page-heading admin-heading">
+  <div><div class="eyebrow">OWNER CONTROL</div><h1>소유자 설정</h1><p class="muted">PostgreSQL 연결 정보와 위키 백업을 관리합니다.</p></div>
+  <span class="admin-chip">소유자 전용</span>
+</div>
+<nav class="page-tabs admin-tabs" aria-label="소유자 메뉴">
+  <a class="active" href="{{ url_for('owner_settings') }}">데이터베이스 및 백업</a>
+  <a href="{{ url_for('admin_dashboard', tab='users') }}">사용자·권한 관리</a>
+</nav>
+<section class="panel">
+  <div class="section-heading"><h2>PostgreSQL 연결 설정</h2><span class="muted">소유자만 수정 가능</span></div>
+  {% if database_mode.startswith('PostgreSQL') %}
+  <p class="warning-note">현재 주 데이터베이스는 Vercel 환경 변수 <code>DATABASE_URL</code>로 연결한 PostgreSQL/Neon입니다. 아래 연결 정보는 백업 저장소를 별도로 지정할 때 사용하며, 비워 두면 <code>DATABASE_URL</code>을 백업 저장소에도 사용합니다.</p>
+  {% else %}
+  <p class="warning-note">현재 주 데이터베이스는 로컬 SQLite입니다. 아래 PostgreSQL 정보는 백업 저장소 연결에 사용됩니다. Vercel 배포에서 데이터를 유지하려면 프로젝트 환경 변수 <code>DATABASE_URL</code>에 PostgreSQL/Neon 연결 문자열을 설정해야 합니다.</p>
+  {% endif %}
+  <form method="post" action="{{ url_for('owner_settings_post') }}" class="admin-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="admin-color-grid">
+      <div class="admin-field"><label for="postgres_host">호스트</label><input id="postgres_host" name="postgres_host" value="{{ pg_settings.host }}" maxlength="255" placeholder="db.example.com"></div>
+      <div class="admin-field"><label for="postgres_port">포트</label><input id="postgres_port" name="postgres_port" value="{{ pg_settings.port }}" type="number" min="1" max="65535" required></div>
+      <div class="admin-field"><label for="postgres_database">데이터베이스 이름</label><input id="postgres_database" name="postgres_database" value="{{ pg_settings.database }}" maxlength="255" placeholder="wiki"></div>
+      <div class="admin-field"><label for="postgres_username">사용자 이름</label><input id="postgres_username" name="postgres_username" value="{{ pg_settings.username }}" maxlength="255" autocomplete="username" placeholder="wiki_user"></div>
+    </div>
+    <div class="admin-color-grid">
+      <div class="admin-field"><label for="postgres_password">비밀번호</label><input id="postgres_password" name="postgres_password" type="password" autocomplete="new-password" placeholder="{{ '저장된 비밀번호 유지 (변경 시 새 비밀번호 입력)' if pg_settings.password_saved else 'PostgreSQL 비밀번호' }}"><small>{% if pg_settings.password_saved %}저장된 비밀번호가 있습니다. 빈칸이면 기존 비밀번호를 유지합니다.{% else %}입력한 비밀번호는 애플리케이션 비밀키를 이용해 암호화하여 저장합니다.{% endif %}</small></div>
+      <div class="admin-field"><label for="postgres_sslmode">SSL 모드</label><select id="postgres_sslmode" name="postgres_sslmode">
+        {% for mode, label in [('prefer','prefer - 가능하면 SSL'),('require','require - SSL 필수'),('verify-ca','verify-ca - 인증서 발급자 확인'),('verify-full','verify-full - 인증서와 호스트 확인'),('allow','allow - 필요 시 SSL'),('disable','disable - SSL 사용 안 함')] %}<option value="{{ mode }}" {% if pg_settings.sslmode == mode %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select></div>
+    </div>
+    <label class="check-row"><input type="checkbox" name="clear_postgres_password" value="1"> 저장된 PostgreSQL 비밀번호 삭제</label>
+    <input type="hidden" name="backup_retention_days" value="{{ backup_retention_days }}">
+    <div class="admin-divider"></div>
+    <div class="button-row">
+      <button class="primary-button" type="submit" name="action" value="save">연결 설정 저장</button>
+      <button class="secondary-button" type="submit" name="action" value="test">입력한 정보로 연결 테스트</button>
+    </div>
+  </form>
+</section>
+<section class="panel">
+  <div class="section-heading"><h2>백업 설정</h2><span class="muted">보관 기간 만료 시 자동 정리</span></div>
+  {% if database_mode.startswith('PostgreSQL') %}
+  <p>수동 백업은 PostgreSQL의 사용자·문서·수정 이력·설정·업로드 이미지를 ZIP으로 내보낸 뒤 <code>namulite_backups</code> 테이블에 저장합니다. Vercel의 임시 파일 시스템은 영구 보관소로 사용하지 않습니다.</p>
+  {% else %}
+  <p>수동 백업은 SQLite 데이터베이스와 업로드 이미지를 ZIP으로 만든 뒤, 로컬 백업 폴더와 설정된 PostgreSQL의 <code>namulite_backups</code> 테이블에 함께 저장합니다.</p>
+  {% endif %}
+  <form method="post" action="{{ url_for('owner_settings_post') }}" class="admin-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="save">
+    <input type="hidden" name="postgres_host" value="{{ pg_settings.host }}">
+    <input type="hidden" name="postgres_port" value="{{ pg_settings.port }}">
+    <input type="hidden" name="postgres_database" value="{{ pg_settings.database }}">
+    <input type="hidden" name="postgres_username" value="{{ pg_settings.username }}">
+    <input type="hidden" name="postgres_sslmode" value="{{ pg_settings.sslmode }}">
+    <div class="admin-field"><label for="backup_retention_days">백업 보관 기간 (일)</label><input id="backup_retention_days" name="backup_retention_days" type="number" min="1" max="3650" value="{{ backup_retention_days }}" required><small>1~3650일. 만료된 백업은 다음 요청의 정리 작업에서 삭제됩니다.</small></div>
+    <div class="button-row"><button class="primary-button" type="submit">백업 보관 기간 저장</button></div>
+  </form>
+  <form method="post" action="{{ url_for('owner_settings_post') }}" class="backup-now-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="backup">
+    <button class="primary-button" type="submit" onclick="return confirm('현재 위키 데이터베이스와 업로드 이미지를 ZIP 백업으로 생성해 PostgreSQL 백업 저장소에 보관할까요?');">지금 백업하기</button>
+    <span class="muted">{% if is_vercel %}Vercel의 임시 파일 목록은 영구 보관되지 않습니다. 아래 PostgreSQL 백업 목록을 사용하세요.{% else %}로컬 백업 {{ backups|length }}개 · 전체 표시 용량 {{ (backup_total_bytes / 1024 / 1024)|round(2) }} MB{% endif %}</span>
+  </form>
+</section>
+<section class="panel">
+  <div class="section-heading"><h2>저장된 백업</h2><span class="muted">최근 100개 표시</span></div>
+  <p class="warning-note">백업 파일에는 문서와 계정 정보 및 IP 기록이 포함될 수 있습니다. 다운로드한 백업 파일을 공개 저장소에 올리지 말고 안전하게 보관하세요.</p>
+  <div class="table-overflow"><table class="data-table"><thead><tr><th>파일</th><th>생성 시각 (UTC)</th><th>크기</th><th>작업</th></tr></thead><tbody>
+  {% for backup in backups %}<tr><td><code>{{ backup.name }}</code></td><td>{{ backup.created_at|replace('T',' ')|replace('+00:00','') }}</td><td>{{ (backup.size / 1024 / 1024)|round(2) }} MB</td><td><a class="secondary-button small-button" href="{{ url_for('owner_download_backup', filename=backup.name) }}">다운로드</a></td></tr>
+  {% else %}<tr><td colspan="4" class="muted">저장된 백업이 없습니다. ‘지금 백업하기’를 눌러 첫 백업을 만들 수 있습니다.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+<section class="panel">
+  <div class="section-heading"><h2>백업 파일에서 복원</h2><span class="muted">소유자 전용 · 기존 데이터 덮어쓰기</span></div>
+  <p class="warning-note">복원하면 현재 위키 데이터베이스와 업로드 이미지가 선택한 백업 시점으로 바뀝니다. 먼저 현재 상태를 백업하세요. ZIP은 NamuLite 백업이어야 하며, DB 무결성을 검사한 후 적용합니다.</p>
+  <form method="post" action="{{ url_for('owner_settings_post') }}" enctype="multipart/form-data" class="admin-form" id="restore-backup-form"
+    data-chunk-start="{{ url_for('owner_restore_upload_start') }}"
+    data-chunk-url="{{ url_for('owner_restore_upload_chunk') }}"
+    data-chunk-finish="{{ url_for('owner_restore_upload_finish') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="restore_upload">
+    <div class="admin-field"><label for="backup_file">백업 ZIP 파일</label><input id="backup_file" name="backup_file" type="file" accept=".zip,application/zip" required><small>최대 업로드 크기 190MB. 복원 후 다시 로그인해야 할 수 있습니다.</small></div>
+    {% if is_vercel %}<p class="muted">Vercel의 요청 크기 제한을 피하기 위해 백업 ZIP은 3MB 단위로 나누어 전송합니다. 이 과정은 복원 파일을 임시 저장한 뒤 PostgreSQL에 적용합니다.</p><p id="restore-upload-status" class="muted" role="status" aria-live="polite"></p>{% endif %}
+    <div class="button-row"><button class="danger-button" type="submit" {% if not is_vercel %}onclick="return confirm('선택한 백업으로 현재 위키 데이터를 덮어쓸까요? 이 작업은 되돌리기 어려울 수 있습니다.');"{% endif %}>선택한 백업으로 복원</button></div>
+  </form>
+</section>
+<section class="panel">
+  <div class="section-heading"><h2>PostgreSQL에 저장된 백업</h2><span class="muted">최근 100개 표시</span></div>
+  <p>‘지금 백업하기’로 만든 백업 파일이 PostgreSQL에 보관됩니다. 백업을 내려받거나 선택한 백업 시점으로 복원할 수 있습니다. PostgreSQL 모드는 PostgreSQL 백업을 복원하고, 이전 SQLite ZIP을 파일 복원 메뉴로 가져올 수도 있습니다. SQLite 로컬 모드에서는 PostgreSQL 전용 백업 형식을 직접 복원할 수 없습니다.</p>
+  <div class="table-overflow"><table class="data-table"><thead><tr><th>파일</th><th>생성 시각</th><th>크기</th><th>작업</th></tr></thead><tbody>
+  {% for backup in pg_backups %}<tr><td><code>{{ backup.name }}</code></td><td>{{ backup.created_at|replace('T',' ')|replace('+00:00','') }}</td><td>{{ (backup.size / 1024 / 1024)|round(2) }} MB</td><td><div class="button-row"><a class="secondary-button small-button" href="{{ url_for('owner_download_postgres_backup', backup_id=backup.id) }}">다운로드</a><form method="post" action="{{ url_for('owner_restore_postgres_backup', backup_id=backup.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="danger-button small-button" type="submit" onclick="return confirm('이 PostgreSQL 백업으로 현재 위키를 덮어쓸까요?');">복원</button></form></div></td></tr>
+  {% else %}<tr><td colspan="4" class="muted">PostgreSQL 백업이 없습니다. 연결 설정을 저장한 후 ‘지금 백업하기’를 누르세요.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+{% if is_vercel %}
+<script>
+(() => {
+  const form = document.getElementById('restore-backup-form');
+  const input = document.getElementById('backup_file');
+  const status = document.getElementById('restore-upload-status');
+  if (!form || !input || !status) return;
+  const chunkSize = 3 * 1024 * 1024;
+  const post = async (url, body) => {
+    const response = await fetch(url, { method: 'POST', body, credentials: 'same-origin' });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || `요청 실패 (${response.status})`);
+    return payload;
+  };
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const file = input.files && input.files[0];
+    if (!file) { status.textContent = '먼저 백업 ZIP 파일을 선택해 주세요.'; return; }
+    if (!file.name.toLowerCase().endsWith('.zip')) { status.textContent = 'ZIP 파일만 선택할 수 있습니다.'; return; }
+    if (!confirm('선택한 백업으로 현재 위키 데이터를 덮어쓸까요? 이 작업은 되돌리기 어려울 수 있습니다.')) return;
+    const button = form.querySelector('button[type="submit"]');
+    const token = form.querySelector('input[name="csrf_token"]').value;
+    const totalChunks = Math.max(1, Math.ceil(file.size / chunkSize));
+    button.disabled = true;
+    try {
+      const startForm = new FormData();
+      startForm.append('csrf_token', token);
+      startForm.append('filename', file.name);
+      startForm.append('size_bytes', String(file.size));
+      startForm.append('total_chunks', String(totalChunks));
+      const started = await post(form.dataset.chunkStart, startForm);
+      for (let index = 0; index < totalChunks; index++) {
+        const chunkForm = new FormData();
+        chunkForm.append('csrf_token', token);
+        chunkForm.append('upload_id', started.upload_id);
+        chunkForm.append('chunk_index', String(index));
+        chunkForm.append('chunk', file.slice(index * chunkSize, Math.min(file.size, (index + 1) * chunkSize)), file.name);
+        await post(form.dataset.chunkUrl, chunkForm);
+        status.textContent = `백업 전송 중: ${index + 1}/${totalChunks} 조각`;
+      }
+      const finishForm = new FormData();
+      finishForm.append('csrf_token', token);
+      finishForm.append('upload_id', started.upload_id);
+      status.textContent = '백업을 검사하고 복원하는 중입니다…';
+      const result = await post(form.dataset.chunkFinish, finishForm);
+      window.location.assign(result.redirect || '/login');
+    } catch (error) {
+      status.textContent = error && error.message ? error.message : '백업 복원에 실패했습니다.';
+      button.disabled = false;
+    }
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

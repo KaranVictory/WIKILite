@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block title %}{{ page['title'] }} - {{ site_name }}{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div><div class="eyebrow">{{ 'USER DOCUMENT' if is_user_document else 'DOCUMENT' }}</div><h1>{{ page['title'] }}</h1></div>
+  <div class="button-row">
+    {% if can_edit_page %}<a class="primary-button" href="{{ url_for('edit_page', title=page['title']) }}">편집</a>{% endif %}
+    {% if can_delete_page %}<form method="post" action="{{ url_for('delete_page', title=page['title']) }}" onsubmit="return confirm('문서를 삭제하면 편집 역사와 토론도 함께 삭제되며 복구는 백업에서만 가능합니다. 계속할까요?');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="danger-button" type="submit">문서 삭제</button></form>{% endif %}
+  </div>
+</div>
+{% if is_user_document and user_doc_owner %}<div class="panel user-document-summary"><p><strong>{{ user_doc_owner['username'] }}</strong>님의 사용자 문서</p><p class="muted">가입일: {{ user_doc_owner['created_at']|replace('T',' ')|replace('+00:00',' UTC') }}</p></div>{% endif %}
+{% if ancestors %}<nav class="page-breadcrumb" aria-label="문서 경로"><span class="muted">상위 문서:</span>{% for ancestor in ancestors %}<a href="{{ page_url(ancestor['title']) }}">{{ ancestor['title'] }}</a>{% if not loop.last %}<span class="breadcrumb-separator">›</span>{% endif %}{% endfor %}<span class="breadcrumb-separator">›</span><strong>{{ page['title'] }}</strong></nav>{% endif %}
+{% if not is_user_document %}
+<div class="subpage-tools">
+  {% if can_create_subpage %}
+    <a class="secondary-button" href="{{ url_for('new_subpage', parent=page['title']) }}">＋ 하위 문서 만들기</a>
+  {% elif not current_user %}
+    <a class="secondary-button" href="{{ url_for('login', next=url_for('new_subpage', parent=page['title'])) }}">로그인 후 하위 문서 만들기</a>
+  {% endif %}
+  {% if subpages %}
+  <details class="subpage-discovery">
+    <summary>하위 문서 찾기 <span class="subpage-count">{{ subpages|length }}</span></summary>
+    <ul class="subpage-list">
+      {% for subpage in subpages %}
+        <li style="margin-left: {{ (subpage['depth'] - 1) * 18 }}px"><a href="{{ page_url(subpage['title']) }}">{{ subpage['title'].split('/')[-1] }}</a><span class="muted">{{ subpage['title'] }}</span></li>
+      {% endfor %}
+    </ul>
+  </details>
+  {% endif %}
+</div>
+{% endif %}
+{% if is_empty_user_document %}<div class="panel"><p class="search-missing-message">아직 사용자 문서가 작성되지 않았습니다.</p>{% if can_edit_user_document %}<p>자기소개나 관심사, 개인 문서 링크 등을 자유롭게 작성할 수 있습니다.</p><a class="primary-button" href="{{ url_for('edit_page', title=page['title']) }}">사용자 문서 작성하기</a>{% else %}<p class="muted">이 사용자가 아직 문서를 작성하지 않았습니다.</p>{% endif %}</div>{% endif %}
+{% if is_old %}<div class="notice">과거 버전을 보고 있습니다. <a href="{{ page_url(page['title']) }}">최신 버전으로 돌아가기</a></div>{% endif %}
+<div class="page-tabs">
+  <a class="active" href="{{ page_url(page['title']) }}">문서</a>
+  <a href="{{ url_for('history', title=page['title']) }}">역사</a>
+  <a href="{{ url_for('discuss', title=page['title']) }}">토론</a>
+  {% if can_edit_page %}<a href="{{ url_for('edit_page', title=page['title']) }}">편집</a>{% endif %}
+  {% if current_user and current_user['is_admin'] %}<a href="{{ url_for('page_acl', title=page['title']) }}">ACL</a>{% endif %}
+</div>
+<article class="wiki-content">{{ rendered|safe }}</article>
+{% if categories %}<div class="categories"><strong>분류</strong>{% for category in categories %}<a href="{{ url_for('category', name=category) }}">{{ category }}</a>{% endfor %}</div>{% endif %}
+<div class="page-meta">최근 수정: {{ revision['created_at']|replace('T',' ')|replace('+00:00',' UTC') if revision else '기록 없음' }} · 편집자: {{ revision['editor_name'] if revision else '없음' }}{% if revision %} · <a href="{{ url_for('diff_revision', revision_id=revision['id']) }}">변경 내용</a>{% endif %}</div>
+{% endblock %}

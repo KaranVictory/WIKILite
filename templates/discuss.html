@@ -1,0 +1,7 @@
+{% extends 'base.html' %}
+{% block title %}{{ page['title'] }} 토론 - {{ site_name }}{% endblock %}
+{% block content %}
+<div class="page-heading"><div><div class="eyebrow">DISCUSSION</div><h1>{{ page['title'] }} 토론</h1></div><a href="{{ page_url(page['title']) }}" class="secondary-button">문서로</a></div>
+<div class="discussion-list">{% for post in posts %}<article class="discussion-post"><div class="discussion-meta"><strong>{{ post['username'] }}</strong><span>{{ post['created_at']|replace('T',' ')|replace('+00:00',' UTC') }}</span></div><p>{{ post['content'] }}</p></article>{% else %}<div class="panel">아직 토론이 없습니다. 첫 의견을 남겨 보세요.</div>{% endfor %}</div>
+{% if can_discuss %}<form method="post" class="panel editor-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label for="content">토론 내용</label><textarea id="content" name="content" rows="5" maxlength="10000" required></textarea><button class="primary-button">토론 등록</button>{% if not current_user %}<p class="muted">익명으로 작성됩니다.</p>{% endif %}</form>{% elif not current_user %}<p class="notice"><a href="{{ url_for('login', next=request.full_path.rstrip('?')) }}">로그인</a>해야 토론에 참여할 수 있습니다.</p>{% else %}<p class="notice">이 문서의 토론 권한이 없거나 현재 계정/IP가 차단되어 있습니다. 관리자에게 문의하세요.</p>{% endif %}
+{% endblock %}

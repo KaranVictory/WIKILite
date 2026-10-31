@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} (없는 문서) - {{ site_name }}{% endblock %}
+{% block content %}
+<div class="page-heading"><div><div class="eyebrow">DOCUMENT NOT FOUND</div><h1>{{ title }}</h1></div></div>
+<div class="panel">
+{% if title.startswith('사용자:') %}
+  <p class="search-missing-message">해당 사용자 문서를 찾을 수 없습니다.</p><p class="muted">사용자 문서는 계정이 생성될 때 자동으로 준비됩니다. 계정 이름을 확인해 주세요.</p>
+{% else %}
+  <p class="search-missing-message">해당 문서는 없습니다. 그 문서를 만드실 건가요?</p>{% if current_user %}<a class="primary-button" href="{{ url_for('edit_page', title=title) }}">문서 만들기</a>{% else %}<p><a href="{{ url_for('login') }}">로그인</a>한 뒤 문서를 만들 수 있습니다.</p>{% endif %}
+{% endif %}
+</div>
+{% endblock %}

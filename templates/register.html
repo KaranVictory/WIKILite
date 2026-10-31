@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block title %}회원가입 - {{ site_name }}{% endblock %}
+{% block content %}
+<div class="auth-wrap"><div class="auth-card auth-card-wide">
+  <div class="eyebrow">JOIN THE WIKI</div>
+  <h1>회원가입</h1>
+  <p class="muted">첫 번째로 가입한 계정에는 관리자 권한이 부여됩니다. 한 IP 주소에서는 최대 5개 계정까지만 가입할 수 있습니다.</p>
+  <form method="post" class="auth-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="username">아이디</label><input id="username" name="username" minlength="2" maxlength="20" autocomplete="username" required>
+    <label for="password">비밀번호</label><input id="password" name="password" type="password" minlength="8" autocomplete="new-password" required>
+    <label for="confirm">비밀번호 확인</label><input id="confirm" name="confirm" type="password" minlength="8" autocomplete="new-password" required>
+
+    <section class="agreement-card">
+      <h2>필수 동의</h2>
+      <label class="agreement-check"><input type="checkbox" name="terms_agree" required><span><strong>이용약관에 동의합니다. (필수)</strong><small>문서 훼손, 타인 사칭, 권리 침해 등 위키 운영을 방해하는 행위를 하지 않으며, 관리자 정책과 접근 제한을 준수합니다. <a href="{{ url_for('terms_page') }}" target="_blank" rel="noopener">이용약관 전문 보기</a></small></span></label>
+      <label class="agreement-check"><input type="checkbox" name="privacy_agree" required><span><strong>개인정보 처리 안내를 확인하고 동의합니다. (필수)</strong><small>계정 보안과 악용 방지를 위해 가입 IP, 최근 접속 IP, 성공한 로그인 IP와 시각을 처리합니다. 별도 회원가입 IP 감사 로그와 로그인 IP 기록은 최대 180일 보관합니다. 계정 관리용 가입 IP는 IP당 계정 수 제한과 차단 대응 목적으로 보관되며, 최근 IP는 차단 대응 목적으로 개인정보 처리 안내에 따라 보관됩니다. 같은 공인 IP를 공유하는 가정·학교·기관 이용자는 계정 수 제한을 함께 적용받을 수 있습니다. <a href="{{ url_for('privacy_page') }}" target="_blank" rel="noopener">개인정보 처리 안내 보기</a></small></span></label>
+    </section>
+    <button class="primary-button full-width" type="submit">동의하고 가입하기</button>
+  </form>
+  <p class="muted">이미 계정이 있나요? <a href="{{ url_for('login') }}">로그인</a></p>
+</div></div>
+{% endblock %}

@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block title %}{{ site_name }}{% endblock %}
+{% block content %}
+<section class="welcome-panel">
+  <div class="eyebrow">WELCOME</div>
+  <h1>{{ site_name }}</h1>
+  <p>{{ site_tagline }}</p>
+</section>
+<article class="wiki-content">{{ rendered|safe }}</article>
+<section class="panel recent-panel">
+  <div class="section-heading"><h2>최근 수정된 문서</h2><a href="{{ url_for('recent_changes') }}">전체 보기 →</a></div>
+  {% if recent %}<ul class="recent-list">{% for row in recent %}<li><a href="{{ page_url(row['title']) }}">{{ row['title'] }}</a><span>{{ row['editor_name'] }} · {{ row['created_at']|replace('T',' ')|replace('+00:00',' UTC') }}</span>{% if row['summary'] %}<small>{{ row['summary'] }}</small>{% endif %}</li>{% endfor %}</ul>{% else %}<p class="muted">아직 수정 기록이 없습니다.</p>{% endif %}
+</section>
+{% endblock %}

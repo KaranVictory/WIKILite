@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+{% block title %}관리자 - {{ site_name }}{% endblock %}
+{% block content %}
+<div class="page-heading admin-heading">
+  <div><div class="eyebrow">SITE MANAGEMENT</div><h1>관리자</h1><p class="muted">위키 외관과 사용자 권한을 관리합니다.</p></div>
+  <span class="admin-chip">관리자 전용</span>
+</div>
+<nav class="page-tabs admin-tabs" aria-label="관리자 메뉴">
+  <a href="{{ url_for('admin_dashboard', tab='overview') }}" class="{{ 'active' if tab == 'overview' else '' }}">개요</a>
+  <a href="{{ url_for('admin_dashboard', tab='appearance') }}" class="{{ 'active' if tab == 'appearance' else '' }}">위키 꾸미기</a>
+  <a href="{{ url_for('admin_dashboard', tab='users') }}" class="{{ 'active' if tab == 'users' else '' }}">사용자 관리</a>
+  <a href="{{ url_for('admin_dashboard', tab='pages') }}" class="{{ 'active' if tab == 'pages' else '' }}">문서 관리</a>
+  <a href="{{ url_for('admin_dashboard', tab='acl') }}" class="{{ 'active' if tab == 'acl' else '' }}">ACL 설정</a>
+  <a href="{{ url_for('admin_dashboard', tab='bans') }}" class="{{ 'active' if tab == 'bans' else '' }}">차단 관리</a>
+  <a href="{{ url_for('admin_dashboard', tab='logins') }}" class="{{ 'active' if tab == 'logins' else '' }}">로그인 IP 기록</a>
+  <a href="{{ url_for('admin_dashboard', tab='registrations') }}" class="{{ 'active' if tab == 'registrations' else '' }}">회원가입 IP 기록</a>
+</nav>
+
+{% if tab == 'overview' %}
+<section class="admin-stat-grid">
+  <div class="admin-stat"><span>전체 문서</span><strong>{{ stats.pages }}</strong><small>작성된 위키 문서</small></div>
+  <div class="admin-stat"><span>사용자</span><strong>{{ stats.users }}</strong><small>가입한 계정</small></div>
+  <div class="admin-stat"><span>수정 기록</span><strong>{{ stats.revisions }}</strong><small>모든 버전 기록</small></div>
+  <div class="admin-stat"><span>토론 글</span><strong>{{ stats.discussions }}</strong><small>문서별 토론</small></div>
+  <div class="admin-stat"><span>활성 차단</span><strong>{{ stats.active_user_bans + stats.active_ip_bans }}</strong><small>계정 {{ stats.active_user_bans }} · IP {{ stats.active_ip_bans }}</small></div>
+  <div class="admin-stat"><span>최근 로그인 기록</span><strong>{{ stats.login_events }}</strong><small>최근 {{ login_log_retention_days }}일 보관</small></div>
+  <div class="admin-stat"><span>최근 가입 기록</span><strong>{{ stats.registration_events }}</strong><small>최근 {{ registration_log_retention_days }}일 보관</small></div>
+</section>
+<section class="panel admin-welcome">
+  <div class="admin-welcome-icon">✦</div>
+  <div><h2>위키를 나답게 꾸며 보세요</h2><p>사이트 이름과 소개 문구, 대표 색상, 링크 색상, 로고와 화면 스타일을 변경할 수 있습니다.</p><a class="primary-button" href="{{ url_for('admin_dashboard', tab='appearance') }}">꾸미기 설정 열기</a></div>
+</section>
+<section class="panel">
+  <div class="section-heading"><h2>관리 상태</h2><a href="{{ url_for('admin_dashboard', tab='users') }}">사용자 관리 →</a></div>
+  <div class="admin-status-row"><span>관리자 계정</span><strong>{{ stats.admins }}명</strong></div>
+  <div class="admin-status-row"><span>현재 위키 이름</span><strong>{{ settings.site_name }}</strong></div>
+  <div class="admin-status-row"><span>화면 스타일</span><strong>{{ {'classic':'클래식','soft':'소프트 블루','warm':'웜 크림'}.get(settings.site_style, '클래식') }}</strong></div>
+</section>
+{% elif tab == 'appearance' %}
+<section class="panel">
+  <div class="section-heading"><h2>위키 기본 정보</h2><span class="muted">저장하면 사이트 전체에 적용됩니다.</span></div>
+  <form method="post" enctype="multipart/form-data" class="admin-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="admin-field"><label for="site_name">위키 이름</label><input id="site_name" name="site_name" maxlength="60" minlength="2" required value="{{ settings.site_name }}"><small>상단 로고 옆, 브라우저 제목과 대문에 표시됩니다.</small></div>
+    <div class="admin-field"><label for="site_tagline">한 줄 소개</label><input id="site_tagline" name="site_tagline" maxlength="120" value="{{ settings.site_tagline }}" placeholder="예: 지식을 함께 모으는 위키입니다."><small>대문 환영 영역과 사이드바에 표시됩니다.</small></div>
+    <div class="admin-field"><label for="site_description">사이트 설명</label><textarea id="site_description" name="site_description" rows="3" maxlength="300" placeholder="위키의 목적을 간단히 소개하세요.">{{ settings.site_description }}</textarea><small>브라우저와 검색 엔진용 설명으로 사용됩니다.</small></div>
+    <div class="admin-divider"></div>
+    <h3>색상과 화면 스타일</h3>
+    <div class="admin-color-grid">
+      <div class="admin-field"><label for="theme_primary">기본 색상</label><div class="color-control"><input id="theme_primary" name="theme_primary" type="color" value="{{ settings.theme_primary }}"><code id="primary-code">{{ settings.theme_primary }}</code></div><small>주요 버튼과 강조 요소에 적용됩니다.</small></div>
+      <div class="admin-field"><label for="theme_accent">링크 색상</label><div class="color-control"><input id="theme_accent" name="theme_accent" type="color" value="{{ settings.theme_accent }}"><code id="accent-code">{{ settings.theme_accent }}</code></div><small>문서 내 링크와 일부 보조 요소에 적용됩니다.</small></div>
+    </div>
+    <div class="admin-field"><label for="site_style">배경 스타일</label><select id="site_style" name="site_style">
+      <option value="classic" {% if settings.site_style == 'classic' %}selected{% endif %}>클래식 — 기본 밝은 회색</option>
+      <option value="soft" {% if settings.site_style == 'soft' %}selected{% endif %}>소프트 블루 — 은은한 푸른 배경</option>
+      <option value="warm" {% if settings.site_style == 'warm' %}selected{% endif %}>웜 크림 — 따뜻한 크림색 배경</option>
+    </select></div>
+    <div class="admin-preview" id="appearance-preview" data-preview-style="{{ settings.site_style }}" style="--preview-primary: {{ settings.theme_primary }}; --preview-accent: {{ settings.theme_accent }};">
+      <div class="admin-preview-bar"><span class="admin-preview-dot"></span><span class="admin-preview-dot"></span><span class="admin-preview-dot"></span><strong id="preview-name">{{ settings.site_name }}</strong></div>
+      <div class="admin-preview-body"><span class="admin-preview-badge">미리 보기</span><h4 id="preview-tagline">{{ settings.site_tagline or '지식을 함께 모으는 위키입니다.' }}</h4><p>사이트 색상과 링크가 어떻게 보이는지 확인하세요.</p><a href="#preview" onclick="return false">문서 링크 예시</a><span class="admin-preview-button">주요 버튼</span></div>
+    </div>
+    <div class="admin-divider"></div>
+    <h3>위키 로고</h3>
+    {% if settings.site_logo %}
+    <div class="current-logo"><img src="{{ url_for('static', filename='uploads/' ~ settings.site_logo) }}" alt="현재 위키 로고"><div><strong>현재 로고</strong><small>{{ settings.site_logo }}</small><label class="check-label"><input type="checkbox" name="remove_logo" value="1"> 현재 로고 제거</label></div></div>
+    {% else %}<p class="muted">아직 업로드된 로고가 없습니다. 로고가 없으면 위키 이름이 표시됩니다.</p>{% endif %}
+    <div class="admin-field"><label for="logo_file">새 로고 업로드</label><input id="logo_file" name="logo_file" type="file" accept="image/png,image/jpeg,image/gif,image/webp"><small>PNG, JPG, GIF, WEBP · 2MB 이하. 투명 배경 PNG를 권장합니다.</small></div>
+    <div class="button-row"><button class="primary-button" type="submit">설정 저장</button><a class="secondary-button" href="{{ url_for('admin_dashboard', tab='appearance') }}">변경 취소</a></div>
+  </form>
+</section>
+<script>
+(() => {
+  const primary = document.getElementById('theme_primary');
+  const accent = document.getElementById('theme_accent');
+  const name = document.getElementById('site_name');
+  const tagline = document.getElementById('site_tagline');
+  const style = document.getElementById('site_style');
+  const preview = document.getElementById('appearance-preview');
+  const bind = () => {
+    preview.style.setProperty('--preview-primary', primary.value);
+    preview.style.setProperty('--preview-accent', accent.value);
+    document.getElementById('primary-code').textContent = primary.value.toLowerCase();
+    document.getElementById('accent-code').textContent = accent.value.toLowerCase();
+    document.getElementById('preview-name').textContent = name.value || '위키 이름';
+    document.getElementById('preview-tagline').textContent = tagline.value || '지식을 함께 모으는 위키입니다.';
+    preview.dataset.previewStyle = style.value;
+  };
+  [primary, accent, name, tagline, style].forEach(el => el.addEventListener('input', bind));
+  style.addEventListener('change', bind);
+  bind();
+})();
+</script>
+{% elif tab == 'users' %}
+<section class="panel">
+  <div class="section-heading"><h2>사용자 계정</h2><span class="muted">{{ stats.users }}명 · 최대 500개 표시</span></div>
+  <p class="muted admin-note">관리자는 문서 화면에서 문서를 삭제할 수 있습니다. 소유자는 별도의 최상위 권한으로, PostgreSQL 연결 설정·백업 관리와 소유자 지정 권한을 가집니다. 관리자 계정과 소유자 계정은 차단할 수 없으며 본인의 권한은 이 화면에서 해제할 수 없습니다.</p>
+  <div class="table-overflow"><table class="data-table admin-users-table"><thead><tr><th>아이디 / IP</th><th>가입일</th><th>권한 및 차단 상태</th><th>경고 횟수</th><th>관리자 권한</th><th>계정 차단</th></tr></thead><tbody>
+  {% for user in users %}<tr>
+    <td><strong>{{ user['username'] }}</strong>{% if current_user['id'] == user['id'] %}<span class="self-label">나</span>{% endif %}<small class="ip-detail">가입 IP: {{ user['registered_ip'] or '기록 없음' }}<br>같은 IP 계정: {{ user['ip_account_count'] }}/{{ max_accounts_per_ip }}<br>최근 IP: {{ user['last_ip'] or '기록 없음' }}</small></td>
+    <td>{{ user['created_at']|replace('T',' ')|replace('+00:00',' UTC') }}</td>
+    <td>{% if user['is_owner'] %}<span class="role-pill admin-role">소유자</span>{% elif user['is_admin'] %}<span class="role-pill admin-role">관리자</span>{% else %}<span class="role-pill">일반 사용자</span>{% endif %}{% if user['active_ban'] %}<br><span class="role-pill banned-role">차단 중</span><small class="ip-detail">{{ user['active_ban']['reason'] }}</small>{% endif %}</td>
+    <td>
+      <span class="warning-count-pill">{{ user['warning_count'] }}회</span>
+      {% if user['warning_count'] %}
+      <details class="user-warning-history"><summary>내역 보기</summary><div class="user-warning-history-list">
+        {% for warning in user['warning_history'] %}<article><strong>{{ warning['reason'] }}</strong><small>{{ warning['created_at']|replace('T',' ')|replace('+00:00',' UTC') }} · {{ warning['issuer_name'] or '운영진' }} · {{ '확인함' if warning['acknowledged_at'] else '미확인' }}</small></article>{% endfor %}
+        {% if user['warning_history']|length < user['warning_count'] %}<small class="muted">최근 20개까지 표시합니다. 전체 횟수는 {{ user['warning_count'] }}회입니다.</small>{% endif %}
+      </div></details>
+      {% endif %}
+    </td>
+    <td>
+      {% if current_user['id'] != user['id'] and not user['is_owner'] %}<form method="post" action="{{ url_for('admin_user_role', user_id=user['id']) }}" class="role-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="is_admin" value="{{ 0 if user['is_admin'] else 1 }}"><button class="{{ 'secondary-button' if user['is_admin'] else 'primary-button' }} small-button" type="submit">{{ '관리자 해제' if user['is_admin'] else '관리자 지정' }}</button></form>{% elif user['is_owner'] %}<span class="muted">소유자만 변경</span>{% else %}<span class="muted">현재 계정</span>{% endif %}
+      {% if current_user['is_owner'] and current_user['id'] != user['id'] %}<form method="post" action="{{ url_for('owner_user_role', user_id=user['id']) }}" class="role-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="is_owner" value="{{ 0 if user['is_owner'] else 1 }}"><button class="{{ 'secondary-button' if user['is_owner'] else 'primary-button' }} small-button" type="submit">{{ '소유자 해제' if user['is_owner'] else '소유자 지정' }}</button></form>{% endif %}
+    </td>
+    <td class="user-moderation-cell">
+      {% if user['active_ban'] %}<a class="compact-ban-status" href="{{ url_for('admin_dashboard', tab='bans') }}">차단 관리 / 해제</a>
+      {% elif not user['is_admin'] and current_user['id'] != user['id'] and not user['is_owner'] %}
+      <details class="compact-ban-action"><summary>차단</summary><form method="post" action="{{ url_for('admin_ban_user', user_id=user['id']) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input name="reason" maxlength="500" placeholder="차단 사유" required><select name="days"><option value="1">1일</option><option value="7" selected>7일</option><option value="14">14일</option><option value="30">30일</option><option value="90">90일</option><option value="permanent">무기한</option></select><input type="hidden" name="ban_ip" value="1"><button class="danger-button small-button" type="submit">차단 적용</button><small>가입·최근 IP에도 적용</small></form></details>
+      {% else %}<span class="muted">불가</span>{% endif %}
+      {% if current_user['id'] != user['id'] and not user['is_owner'] %}
+      <details class="compact-warning-action"><summary>경고</summary><form method="post" action="{{ url_for('admin_issue_warning') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="user_id" value="{{ user['id'] }}"><textarea name="reason" rows="2" maxlength="1000" required placeholder="경고 사유"></textarea><button class="primary-button small-button" type="submit">경고 전달</button></form></details>
+      {% endif %}
+    </td>
+  </tr>{% else %}<tr><td colspan="6" class="muted">가입한 사용자가 없습니다.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+{% elif tab == 'pages' %}
+<section class="panel">
+  <div class="section-heading"><h2>문서 목록</h2><span class="muted">최근 변경 순 · 최대 100개</span></div>
+  <div class="table-overflow"><table class="data-table"><thead><tr><th>문서</th><th>최근 편집자</th><th>최근 수정</th><th>바로 가기</th></tr></thead><tbody>
+  {% for page in pages %}<tr><td><strong>{{ page['title'] }}</strong></td><td>{{ page['editor_name'] or '기록 없음' }}</td><td>{{ page['updated_at']|replace('T',' ')|replace('+00:00',' UTC') }}</td><td><a href="{{ page_url(page['title']) }}">열기</a> · <a href="{{ url_for('history', title=page['title']) }}">역사</a> · <a href="{{ url_for('page_acl', title=page['title']) }}">ACL</a></td></tr>{% else %}<tr><td colspan="4" class="muted">아직 문서가 없습니다.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+{% elif tab == 'acl' %}
+<section class="panel">
+  <div class="section-heading"><h2>기본 접근 제어 목록(ACL)</h2><span class="muted">문서별 ACL이 있으면 문서별 설정이 우선합니다.</span></div>
+  <p class="admin-note muted">나무위키의 접근 제한 단계에서 착안한 정책입니다. 신규 가입자 제한은 일반적으로 가입 후 15일을 기준으로 하며, 이 위키에서는 일수를 직접 조절할 수 있습니다. 실제 나무위키의 모든 인증·운영진 정책을 복제한 것은 아닙니다.</p>
+  <form method="post" action="{{ url_for('admin_dashboard', tab='acl') }}" class="admin-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% for action, label in [('read','읽기 권한'),('edit','편집 권한'),('discuss','토론 권한')] %}
+    <div class="acl-rule-card"><h3>{{ label }}</h3><div class="acl-rule-fields"><div class="admin-field"><label for="acl_{{ action }}_mode">허용 기준</label><select id="acl_{{ action }}_mode" name="acl_{{ action }}_mode">{% for mode, mode_label in policy_labels.items() %}{% if mode != 'contributor' %}<option value="{{ mode }}" {% if acl_defaults[action]['policy'] == mode %}selected{% endif %}>{{ mode_label }}</option>{% endif %}{% endfor %}</select></div><div class="admin-field"><label for="acl_{{ action }}_days">계정 가입 후 경과 일수</label><input id="acl_{{ action }}_days" name="acl_{{ action }}_days" type="number" min="0" max="3650" value="{{ acl_defaults[action]['min_account_days'] }}"><small>허용 기준이 가입 기간일 때 사용합니다. 예: 7일은 1주, 14일은 2주, 15일은 나무위키의 대표적인 신규 가입 제한 기준입니다.</small></div></div></div>
+    {% endfor %}
+    <div class="button-row"><button class="primary-button" type="submit">기본 ACL 저장</button></div>
+  </form>
+</section>
+<section class="panel"><h2>정책 설명</h2><ul class="acl-help-list"><li><strong>누구나:</strong> 로그인하지 않은 사용자도 허용합니다.</li><li><strong>로그인한 사용자:</strong> 계정에 로그인해야 합니다.</li><li><strong>가입 후 일정 기간 경과:</strong> 계정 생성일로부터 지정한 일수가 지나야 합니다.</li><li><strong>해당 문서 기여자:</strong> 현재 계정이 해당 문서에 한 번 이상 편집 기록을 남겨야 합니다.</li><li><strong>관리자만:</strong> 관리자 계정만 허용합니다.</li></ul><p class="muted">관리자는 ACL에 의해 잠기지 않도록 항상 우회할 수 있습니다. 계정/IP 차단은 별도로 적용되며, 일반 사용자의 읽기는 차단하지 않고 편집·토론·가입을 제한합니다.</p></section>
+{% elif tab == 'bans' %}
+<section class="panel"><div class="section-heading"><h2>IP 주소 차단</h2><span class="muted">현재 활성 IP 차단 {{ stats.active_ip_bans }}개</span></div>
+  <p class="warning-note">IP 차단은 같은 공인 IP를 공유하는 다른 사람에게도 영향을 줄 수 있습니다. 이 엔진은 정확한 IPv4/IPv6 주소만 지원하며 CIDR 대역 차단은 아직 지원하지 않습니다. localhost로 테스트하면 여러 계정이 같은 127.0.0.1 주소를 공유할 수 있습니다.</p>
+  <form method="post" action="{{ url_for('admin_add_ip_ban') }}" class="ban-create-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><div class="admin-field"><label for="ip_address">IPv4 또는 IPv6 주소</label><input id="ip_address" name="ip_address" required placeholder="203.0.113.10"></div><div class="admin-field"><label for="ip_days">기간</label><select id="ip_days" name="days"><option value="1">1일</option><option value="7" selected>7일</option><option value="14">14일</option><option value="30">30일</option><option value="90">90일</option><option value="permanent">무기한</option></select></div><div class="admin-field"><label for="ip_reason">차단 사유</label><input id="ip_reason" name="reason" maxlength="500" required placeholder="규정 위반 사유"></div><button class="danger-button" type="submit">IP 차단</button></form>
+</section>
+<section class="panel"><div class="section-heading"><h2>계정 차단 내역</h2><span class="muted">최대 300개</span></div><div class="table-overflow"><table class="data-table"><thead><tr><th>계정</th><th>사유</th><th>기간</th><th>관리자</th><th>상태 / 작업</th></tr></thead><tbody>{% for ban in user_bans %}<tr><td>{{ ban['username'] or '삭제된 계정' }} <small class="ip-detail">ID #{{ ban['id'] }}</small></td><td>{{ ban['reason'] }}</td><td>{{ ban['created_at']|replace('T',' ')|replace('+00:00',' UTC') }}<br>~ {{ ban['expires_at']|replace('T',' ')|replace('+00:00',' UTC') if ban['expires_at'] else '무기한' }}</td><td>{{ ban['creator_name'] or '알 수 없음' }}</td><td>{% if ban['revoked_at'] %}<span class="role-pill">해제됨</span>{% elif ban['expires_at'] and ban['expires_at'] <= current_time %}<span class="role-pill">만료됨</span>{% else %}<span class="role-pill banned-role">활성</span><form method="post" action="{{ url_for('admin_revoke_user_ban', ban_id=ban['id']) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="secondary-button small-button" type="submit">계정/IP 차단 해제</button></form>{% endif %}</td></tr>{% else %}<tr><td colspan="5" class="muted">계정 차단 내역이 없습니다.</td></tr>{% endfor %}</tbody></table></div></section>
+<section class="panel"><div class="section-heading"><h2>IP 차단 내역</h2><span class="muted">최대 300개</span></div><div class="table-overflow"><table class="data-table"><thead><tr><th>IP 주소</th><th>연결 계정</th><th>사유</th><th>기간</th><th>상태 / 작업</th></tr></thead><tbody>{% for ban in ip_bans %}<tr><td><code>{{ ban['ip_address'] }}</code><small class="ip-detail">ID #{{ ban['id'] }} · {{ '계정 연동' if ban['source'] == 'account' else '수동' }}</small></td><td>{{ ban['username'] or '직접 차단' }}</td><td>{{ ban['reason'] }}</td><td>{{ ban['created_at']|replace('T',' ')|replace('+00:00',' UTC') }}<br>~ {{ ban['expires_at']|replace('T',' ')|replace('+00:00',' UTC') if ban['expires_at'] else '무기한' }}</td><td>{% if ban['revoked_at'] %}<span class="role-pill">해제됨</span>{% elif ban['expires_at'] and ban['expires_at'] <= current_time %}<span class="role-pill">만료됨</span>{% else %}<span class="role-pill banned-role">활성</span><form method="post" action="{{ url_for('admin_revoke_ip_ban', ban_id=ban['id']) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="secondary-button small-button" type="submit">IP 차단 해제</button></form>{% endif %}</td></tr>{% else %}<tr><td colspan="5" class="muted">IP 차단 내역이 없습니다.</td></tr>{% endfor %}</tbody></table></div></section>
+{% elif tab == 'logins' %}
+<section class="panel">
+  <div class="section-heading"><h2>성공한 로그인 IP 기록</h2><span class="muted">최근 {{ login_log_retention_days }}일 · 최대 500개 표시</span></div>
+  <p class="warning-note">이 화면은 관리자 전용입니다. 성공한 로그인만 기록하며, IP와 시각은 계정 보안 및 악용 방지 목적에 사용됩니다. 만료 기록은 앱 요청 처리 시 하루에 한 번 자동 정리됩니다.</p>
+  <div class="table-overflow"><table class="data-table login-logs-table"><thead><tr><th>시각 (UTC)</th><th>계정</th><th>IP 주소</th><th>현재 권한</th></tr></thead><tbody>
+  {% for log in login_logs %}<tr><td>{{ log['created_at']|replace('T',' ')|replace('+00:00','') }}</td><td>{{ log['username'] }}</td><td><code>{{ log['ip_address'] or '확인되지 않음' }}</code></td><td>{% if log['is_admin'] %}<span class="role-pill admin-role">관리자</span>{% else %}<span class="role-pill">일반 사용자</span>{% endif %}</td></tr>{% else %}<tr><td colspan="4" class="muted">보관 기간 내 로그인 기록이 없습니다. 이 기록은 새 버전 적용 이후 로그인부터 쌓입니다.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+{% elif tab == 'registrations' %}
+<section class="panel">
+  <div class="section-heading"><h2>회원가입 IP 기록</h2><span class="muted">최근 {{ registration_log_retention_days }}일 · 최대 500개 표시</span></div>
+  <p class="warning-note">한 IP 주소에서 최대 5개 계정까지만 가입할 수 있습니다. 같은 공인 IP를 공유하는 가정·학교·기관 이용자는 계정 수 제한을 함께 적용받을 수 있습니다. 이 화면은 관리자 전용이며, 성공한 회원가입의 아이디, IP 주소와 시각을 보안 및 악용 방지 목적으로 기록합니다. 기록은 최대 {{ registration_log_retention_days }}일 보관되며 만료된 항목은 앱 요청 처리 시 하루에 한 번 자동 정리됩니다. 계정 관리용 가입 IP는 사용자 관리에도 표시되며, 별도 보관 정책을 따릅니다.</p>
+  <div class="table-overflow"><table class="data-table login-logs-table"><thead><tr><th>시각 (UTC)</th><th>계정</th><th>가입 IP</th><th>현재 권한</th></tr></thead><tbody>
+  {% for log in registration_logs %}<tr><td>{{ log['created_at']|replace('T',' ')|replace('+00:00','') }}</td><td>{{ log['username'] }}</td><td><code>{{ log['ip_address'] or '확인되지 않음' }}</code></td><td>{% if log['is_admin'] %}<span class="role-pill admin-role">관리자</span>{% else %}<span class="role-pill">일반 사용자</span>{% endif %}</td></tr>{% else %}<tr><td colspan="4" class="muted">보관 기간 내 회원가입 IP 기록이 없습니다. 이전 버전 계정은 가입 IP가 기존 계정 정보에 남아 있는 경우에만 기록 화면에 채워집니다.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,6 @@
+{% extends 'base.html' %}
+{% block title %}분류:{{ name }} - {{ site_name }}{% endblock %}
+{% block content %}
+<div class="page-heading"><div><div class="eyebrow">CATEGORY</div><h1>분류:{{ name }}</h1></div></div>
+<div class="panel"><p class="muted">이 분류에 포함된 문서</p>{% if pages %}<ul class="simple-list">{% for page in pages %}<li><a href="{{ page_url(page['title']) }}">{{ page['title'] }}</a><span>{{ page['updated_at']|replace('T',' ')|replace('+00:00',' UTC') }}</span></li>{% endfor %}</ul>{% else %}<p>이 분류에 등록된 문서가 없습니다.</p>{% endif %}</div>
+{% endblock %}

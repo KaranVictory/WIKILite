@@ -1,0 +1,6 @@
+{% extends 'base.html' %}
+{% block title %}{{ page_title }} 변경 내용 - {{ site_name }}{% endblock %}
+{% block content %}
+<div class="page-heading"><div><div class="eyebrow">REVISION DIFF</div><h1>{{ page_title }} 변경 내용</h1><p class="muted">{{ revision['created_at']|replace('T',' ')|replace('+00:00',' UTC') }} · {{ revision['editor_name'] }}</p></div><a href="{{ page_url(page_title) }}" class="secondary-button">문서로</a></div>
+<div class="diff-wrap">{{ diff_table|safe }}</div>
+{% endblock %}

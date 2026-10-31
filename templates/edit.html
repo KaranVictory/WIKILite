@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} 편집 - {{ site_name }}{% endblock %}
+{% block content %}
+<div class="page-heading"><div><div class="eyebrow">EDITOR</div><h1>{{ title }} 편집</h1></div><a href="{{ page_url(title) }}" class="secondary-button">취소</a></div>
+<form method="post" class="editor-form" enctype="multipart/form-data">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <label for="content">문서 내용 <span class="muted">(지원 문법은 README 참고)</span></label>
+  <textarea id="content" name="content" rows="22" spellcheck="false">{{ content }}</textarea>
+  <label for="summary">편집 요약</label>
+  <input id="summary" name="summary" maxlength="200" value="{{ summary }}" placeholder="예: 문서 내용 추가">
+  <section class="contribution-agreement">
+    <h2>기여 라이선스 및 생성형 AI 정책</h2>
+    <p>문서 편집을 저장하면 당신은 기여한 내용을 <strong>CC-BY-NC-SA 2.0 KR</strong>으로 배포하고 기여한 문서에 대한 하이퍼링크나 URL을 이용하여 저작자 표시를 하는 것으로 충분하다는 데 동의하는 것입니다. 이 동의는 철회할 수 없습니다.</p>
+    <p>또한 생성형 인공지능의 사용은 일부 예외를 제외하고 금지되어 있습니다. 예외에 해당하는 일부 교정·번역·미디어의 텍스트 변환·외부 출처 수집 등의 경우에도 관련 정책을 준수해야 합니다. 외부 출처를 찾는 데 생성형 AI를 사용하더라도 AI가 생성한 답변 자체는 출처로 취급하지 않습니다.</p>
+    <p class="muted"><a href="https://creativecommons.org/licenses/by-nc-sa/2.0/kr/legalcode.ko" target="_blank" rel="noopener">CC-BY-NC-SA 2.0 KR 라이선스 전문</a> · <a href="{{ url_for('terms_page') }}#ai-policy" target="_blank" rel="noopener">생성형 AI 정책 전문</a></p>
+    <label class="agreement-check edit-agreement-check"><input type="checkbox" name="license_agree" value="on" {% if license_agreed %}checked{% endif %} required><span><strong>위 기여 라이선스 및 생성형 AI 정책을 읽었으며 동의합니다. (필수)</strong><small>저장 시 동의 시각과 정책 버전이 해당 편집 기록에 저장됩니다. 미리 보기와 이미지 업로드에는 동의가 필요하지 않습니다.</small></span></label>
+  </section>
+  <div class="button-row"><button class="primary-button" name="action" value="save">저장</button><button class="secondary-button" name="action" value="preview" formnovalidate>미리 보기</button></div>
+  <section class="upload-box">
+    <h2>이미지 업로드</h2>
+    <p>PNG, JPG, GIF, WEBP 파일을 지원해. 파일당 최대 {{ 3 if is_vercel else 8 }}MB야.</p>
+    <label for="upload_files">이미지 파일 선택</label>
+    <input id="upload_files" name="upload_files" type="file" accept="image/png,image/jpeg,image/gif,image/webp" {% if not is_vercel %}multiple{% endif %}>
+    <button class="secondary-button" name="action" value="upload" formnovalidate>이미지 업로드</button>
+  </section>
+</form>
+{% if uploaded_files %}
+<section class="panel upload-results">
+  <h2>업로드된 이미지 — 문서에 넣을 문법</h2>
+  {% for filename in uploaded_files %}
+  <div class="uploaded-file-row">
+    <img src="{{ url_for('static', filename='uploads/' ~ filename) }}" alt="{{ filename }}">
+    <div><strong>{{ filename }}</strong><code>[[파일:{{ filename }}]]</code><span class="muted">너비를 지정하려면 <code>[[파일:{{ filename }}|width=300]]</code>처럼 사용해.</span></div>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+{% if preview_html is not none %}<section class="panel preview-panel"><div class="preview-heading"><h2>미리 보기</h2><div class="preview-theme-controls" role="group" aria-label="미리 보기 테마"><button type="button" class="secondary-button small-button active" data-preview-mode="light">밝은 모드</button><button type="button" class="secondary-button small-button" data-preview-mode="dark">검은 모드</button></div></div><div class="preview-theme" id="namumark-preview" data-preview-theme="light"><article class="wiki-content">{{ preview_html|safe }}</article></div></section><script>
+(() => {
+  const preview = document.getElementById('namumark-preview');
+  if (!preview) return;
+  document.querySelectorAll('[data-preview-mode]').forEach(button => button.addEventListener('click', () => {
+    const mode = button.dataset.previewMode;
+    preview.dataset.previewTheme = mode;
+    document.querySelectorAll('[data-preview-mode]').forEach(item => {
+      item.classList.toggle('active', item === button);
+      item.setAttribute('aria-pressed', item === button ? 'true' : 'false');
+    });
+  }));
+})();
+</script>{% endif %}
+{% endblock %}
