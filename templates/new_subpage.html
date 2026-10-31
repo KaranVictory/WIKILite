@@ -1,0 +1,7 @@
+{% extends 'base.html' %}
+{% block title %}하위 문서 만들기 - {{ site_name }}{% endblock %}
+{% block content %}
+<div class="page-heading"><div><div class="eyebrow">NESTED DOCUMENT</div><h1>하위 문서 만들기</h1><p class="muted">상위 문서: <a href="{{ page_url(parent_title) }}">{{ parent_title }}</a></p></div><a class="secondary-button" href="{{ page_url(parent_title) }}">상위 문서로 돌아가기</a></div>
+<section class="panel"><p>하위 문서는 <code>{{ parent_title }}/문서 이름</code> 형식으로 생성됩니다. 이름에 <code>/</code>를 추가하면 더 깊은 단계의 하위 문서도 만들 수 있습니다.</p>
+<form method="post" class="auth-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="parent" value="{{ parent_title }}"><label for="subpage">하위 문서 이름</label><input id="subpage" name="subpage" maxlength="200" value="{{ subpage }}" required placeholder="예: DDS의 장비 또는 DDS의 장비/레이더"><p class="muted">미리보기 제목: <code>{{ parent_title }}/{{ subpage if subpage else '문서 이름' }}</code></p><div class="button-row"><button class="primary-button" type="submit">편집 화면 열기</button><a class="secondary-button" href="{{ page_url(parent_title) }}">취소</a></div></form></section>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block title %}{{ page['title'] }} ACL - {{ site_name }}{% endblock %}
+{% block content %}
+<div class="page-heading"><div><div class="eyebrow">ACCESS CONTROL LIST</div><h1>{{ page['title'] }} ACL</h1><p class="muted">이 문서에만 적용되는 읽기·편집·토론 권한을 설정합니다.</p></div><a class="secondary-button" href="{{ page_url(page['title']) }}">문서로 돌아가기</a></div>
+<div class="panel acl-page-intro"><strong>기본 ACL과 상속</strong><p>“기본 설정 상속”을 선택하면 관리자 메뉴의 기본 ACL 설정을 사용합니다. 관리자 계정은 문서 ACL을 우회할 수 있습니다.</p></div>
+<form method="post" class="panel admin-form page-acl-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  {% for action, label in actions.items() %}
+  <section class="acl-rule-card">
+    <div class="section-heading"><h2>{{ label }} 권한</h2>{% if acl_settings[action]['inherited'] %}<span class="role-pill">기본 설정 상속</span>{% else %}<span class="role-pill admin-role">문서별 재정의</span>{% endif %}</div>
+    <div class="acl-rule-fields">
+      <div class="admin-field"><label for="policy_{{ action }}">허용 기준</label><select id="policy_{{ action }}" name="policy_{{ action }}">
+        <option value="inherit" {% if acl_settings[action]['inherited'] %}selected{% endif %}>기본 설정 상속</option>
+        {% for mode, mode_label in policy_labels.items() %}<option value="{{ mode }}" {% if not acl_settings[action]['inherited'] and acl_settings[action]['policy'] == mode %}selected{% endif %}>{{ mode_label }}</option>{% endfor %}
+      </select><small>현재 적용 기준: {{ policy_labels[acl_settings[action]['policy']] }}{% if acl_settings[action]['policy'] == 'age' %} · 가입 후 {{ acl_settings[action]['min_account_days'] }}일{% endif %}</small></div>
+      <div class="admin-field"><label for="days_{{ action }}">계정 가입 후 경과 일수</label><input id="days_{{ action }}" name="days_{{ action }}" type="number" min="0" max="3650" value="{{ acl_settings[action]['min_account_days'] }}"><small>“가입 후 일정 기간 경과” 선택 시 적용됩니다. 예: 7=1주, 14=2주, 15=나무위키의 일반적인 신규 가입 제한 기준.</small></div>
+    </div>
+    <div class="admin-field"><label for="reason_{{ action }}">설정 사유 (선택)</label><input id="reason_{{ action }}" name="reason_{{ action }}" maxlength="500" value="{{ acl_settings[action]['reason'] }}" placeholder="예: 문서 훼손 방지를 위해 편집 제한"></div>
+  </section>
+  {% endfor %}
+  <div class="button-row"><button class="primary-button" type="submit">ACL 저장</button><a class="secondary-button" href="{{ page_url(page['title']) }}">취소</a></div>
+</form>
+{% endblock %}

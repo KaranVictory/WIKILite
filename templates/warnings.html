@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block title %}경고함 - {{ site_name }}{% endblock %}
+{% block content %}
+<div class="page-heading"><div><div class="eyebrow">ACCOUNT NOTICES</div><h1>경고함</h1><p class="muted">운영진이 계정에 전달한 경고와 확인 상태를 볼 수 있습니다.</p></div></div>
+{% if warnings %}
+  <div class="warning-history-list">
+  {% for warning in warnings %}
+    <article class="panel warning-history-item">
+      <div class="section-heading"><strong>운영진 경고 #{{ warning['id'] }}</strong>{% if warning['acknowledged_at'] %}<span class="role-pill">확인함</span>{% else %}<span class="role-pill banned-role">미확인</span>{% endif %}</div>
+      <p class="warning-history-reason">{{ warning['reason'] }}</p>
+      <p class="muted">발행: {{ warning['issuer_name'] or '운영진' }} · {{ warning['created_at']|replace('T',' ')|replace('+00:00',' UTC') }}</p>
+      {% if warning['acknowledged_at'] %}<p class="muted">확인 시각: {{ warning['acknowledged_at']|replace('T',' ')|replace('+00:00',' UTC') }}</p>{% else %}<form method="post" action="{{ url_for('acknowledge_warning', warning_id=warning['id']) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="primary-button" type="submit">확인했습니다</button></form>{% endif %}
+    </article>
+  {% endfor %}
+  </div>
+{% else %}
+  <section class="panel"><p class="muted">전달받은 경고가 없습니다.</p></section>
+{% endif %}
+{% endblock %}

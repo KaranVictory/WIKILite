@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="{{ site_description }}">
+  <meta name="theme-color" content="{{ theme_primary }}">
+  <script>
+    (() => {
+      let theme = 'light';
+      try { theme = localStorage.getItem('namulite-theme') || 'light'; } catch (_) {}
+      if (theme !== 'dark' && theme !== 'light') theme = 'light';
+      document.documentElement.dataset.theme = theme;
+    })();
+  </script>
+  <title>{% block title %}{{ site_name }}{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>:root{--wiki-primary:{{ theme_primary }};--wiki-accent:{{ theme_accent }}}</style>
+</head>
+<body data-site-style="{{ site_style }}">
+<header class="topbar">
+  <a class="brand" href="{{ page_url('대문') }}">{% if site_logo %}<img class="brand-logo" src="{{ url_for('static', filename='uploads/' ~ site_logo) }}" alt="">{% endif %}<span>{{ site_name }}</span></a>
+  <form class="search" action="{{ url_for('search') }}" method="get">
+    <input type="search" name="q" placeholder="문서 검색" value="{{ request.args.get('q', '') }}" aria-label="문서 검색">
+    <button type="submit">검색</button>
+  </form>
+  <nav class="account-nav">
+    <button type="button" class="theme-toggle" id="theme-toggle" aria-label="화면 테마 변경" aria-pressed="false">🌙 어두운 모드</button>
+    {% if current_user %}
+      {% if current_user['is_owner'] %}<a class="admin-nav-link" href="{{ url_for('owner_settings') }}">소유자 설정</a>{% endif %}
+      {% if current_user['is_admin'] %}<a class="admin-nav-link" href="{{ url_for('admin_dashboard') }}">관리자</a>{% endif %}
+      <a class="user-label" href="{{ page_url('사용자:' ~ current_user['username']) }}">{{ current_user['username'] }}{% if current_user['is_owner'] %} · 소유자{% elif current_user['is_admin'] %} · 관리자{% endif %}</a>
+      <a href="{{ url_for('warning_inbox') }}">경고함{% if unread_warning_count %} ({{ unread_warning_count }}){% endif %}</a>
+      <a href="{{ page_url('사용자:' ~ current_user['username']) }}">내 사용자 문서</a>
+      <form method="post" action="{{ url_for('logout') }}" class="inline-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="link-button" type="submit">로그아웃</button>
+      </form>
+    {% else %}
+      <a href="{{ url_for('login') }}">로그인</a>
+      <a href="{{ url_for('register') }}">회원가입</a>
+    {% endif %}
+  </nav>
+</header>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="side-title">위키 메뉴</div>
+    <a href="{{ page_url('대문') }}">대문</a>
+    <a href="{{ url_for('recent_changes') }}">최근 변경</a>
+    <a href="{{ url_for('random_page') }}">랜덤 문서</a>
+    {% if current_user %}<a href="{{ page_url('사용자:' ~ current_user['username']) }}">내 사용자 문서</a>{% endif %}
+    {% if current_user and current_user['is_owner'] %}<a class="admin-sidebar-link" href="{{ url_for('owner_settings') }}">♛ 소유자 설정</a>{% endif %}
+    {% if current_user and current_user['is_admin'] %}<a class="admin-sidebar-link" href="{{ url_for('admin_dashboard') }}">⚙ 관리자</a>{% endif %}
+    <div class="side-note">{{ site_name }}<br><small>{{ site_tagline }}</small></div>
+  </aside>
+  <main class="main">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}<div class="flash-stack">{% for category, message in messages %}<div class="flash {{ category }}">{{ message }}</div>{% endfor %}</div>{% endif %}
+    {% endwith %}
+    {% if current_user and show_login_warning_modal and unread_warnings %}
+      <div class="warning-modal-backdrop" id="login-warning-modal" role="presentation">
+        <section class="warning-modal" role="dialog" aria-modal="true" aria-labelledby="login-warning-title" tabindex="-1">
+          <div class="warning-modal-heading">
+            <div><div class="eyebrow">ACCOUNT NOTICE</div><h2 id="login-warning-title">운영진 경고 {{ unread_warning_count }}개</h2><p>아래 내용을 확인해 주세요. 확인하지 않은 경고는 다음 로그인 때 다시 표시됩니다.</p></div>
+            <button type="button" class="theme-modal-close" data-close-warning aria-label="닫기">×</button>
+          </div>
+          <div class="warning-modal-list">
+            {% for warning in unread_warnings %}
+              <article class="warning-modal-item">
+                <div class="warning-modal-reason">{{ warning['reason'] }}</div>
+                <small>{{ warning['created_at']|replace('T',' ')|replace('+00:00',' UTC') }} · 발행: {{ warning['issuer_name'] or '운영진' }}</small>
+                <form method="post" action="{{ url_for('acknowledge_warning', warning_id=warning['id']) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="secondary-button small-button" type="submit">이 경고 확인</button>
+                </form>
+              </article>
+            {% endfor %}
+          </div>
+          <div class="warning-modal-footer"><a href="{{ url_for('warning_inbox') }}">전체 경고 내역</a><button type="button" class="primary-button" data-close-warning>닫기</button></div>
+        </section>
+      </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+<footer class="footer">{{ site_name }}{% if site_tagline %} · {{ site_tagline }}{% endif %}</footer>
+<script>
+(() => {
+  const root = document.documentElement;
+  const toggle = document.getElementById('theme-toggle');
+  const updateThemeButton = () => {
+    const dark = root.dataset.theme === 'dark';
+    toggle.textContent = dark ? '☀️ 밝은 모드' : '🌙 어두운 모드';
+    toggle.setAttribute('aria-pressed', dark ? 'true' : 'false');
+  };
+  if (toggle) {
+    updateThemeButton();
+    toggle.addEventListener('click', () => {
+      const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
+      root.dataset.theme = next;
+      try { localStorage.setItem('namulite-theme', next); } catch (_) {}
+      updateThemeButton();
+    });
+  }
+
+  const warningModal = document.getElementById('login-warning-modal');
+  if (warningModal) {
+    const closeButtons = warningModal.querySelectorAll('[data-close-warning]');
+    const closeModal = () => warningModal.remove();
+    closeButtons.forEach(button => button.addEventListener('click', closeModal));
+    warningModal.addEventListener('click', event => {
+      if (event.target === warningModal) closeModal();
+    });
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && document.getElementById('login-warning-modal')) closeModal();
+    });
+    const firstButton = warningModal.querySelector('button');
+    if (firstButton) firstButton.focus();
+  }
+})();
+</script>
+</body>
+</html>
